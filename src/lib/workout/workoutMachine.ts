@@ -42,6 +42,8 @@ export class WorkoutMachine {
   private phase = "standing";
   private cue = "Position your full body inside the frame.";
   private primaryError: FormError | null = null;
+  private attemptError: FormError | null = null;
+  private attemptErrorUntil = 0;
   private setupMessage = "Position your full body inside the frame.";
   private setupProgress = 0;
   private gestureProgress = 0;
@@ -75,6 +77,8 @@ export class WorkoutMachine {
     this.gestureProgress = 0;
     this.feedback.reset();
     this.primaryError = null;
+    this.attemptError = null;
+    this.attemptErrorUntil = 0;
     this.lastErrorId = "";
   }
 
@@ -216,6 +220,13 @@ export class WorkoutMachine {
           detectorState: result.phase,
         };
         this.primaryError = this.feedback.update(result.errors, now);
+        if (
+          !this.primaryError &&
+          this.attemptError &&
+          now < this.attemptErrorUntil
+        )
+          this.primaryError = this.attemptError;
+        if (now >= this.attemptErrorUntil) this.attemptError = null;
         if (this.primaryError && this.primaryError.id !== this.lastErrorId) {
           this.event = "warning";
           this.lastErrorId = this.primaryError.id;
@@ -249,6 +260,9 @@ export class WorkoutMachine {
             }
           } else if (rep.errors[0]) {
             this.primaryError = rep.errors[0];
+            this.attemptError = rep.errors[0];
+            this.attemptErrorUntil = now + 1800;
+            this.event = "warning";
           }
         }
       }
